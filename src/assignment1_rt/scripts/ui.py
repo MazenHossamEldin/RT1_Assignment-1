@@ -8,6 +8,7 @@ def spawn_turtle():
     rospy.wait_for_service('/spawn')
     try:
         spawn = rospy.ServiceProxy('/spawn', Spawn)
+        rospy.loginfo("Spawning turtle2...")
         spawn(5.0, 5.0, 0.0, 'turtle2')
         rospy.loginfo("Turtle2 spawned successfully!")
     except rospy.ServiceException as e:
@@ -15,9 +16,10 @@ def spawn_turtle():
 
 def main():
     rospy.init_node('ui_node', anonymous=True)
-    pub1 = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=2)
-    pub2 = rospy.Publisher('/turtle2/cmd_vel', Twist, queue_size=2)
+    pub1 = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
+    pub2 = rospy.Publisher('/turtle2/cmd_vel', Twist, queue_size=10)
 
+    rospy.sleep(1)  # Ensure topics are initialized
     spawn_turtle()
 
     while not rospy.is_shutdown():
@@ -32,30 +34,31 @@ def main():
 
         while True:
             try:
-                lin_vel_str = input("Enter linear velocity (-10.0 to 10.0): ")
-                ang_vel_str = input("Enter angular velocity (-10.0 to 10.0): ")
-                lin_vel = float(lin_vel_str)
-                ang_vel = float(ang_vel_str) 
+                lin_vel = float(input("Enter linear velocity (-10.0 to 10.0): "))
+                ang_vel = float(input("Enter angular velocity (-10.0 to 10.0): "))
                 if -10.0 <= lin_vel <= 10.0 and -10.0 <= ang_vel <= 10.0:
                     break
                 else:
-                    print("Linear velocity must be between -10.0 and 10.0. Angular velocity must be between -10.0 and 10.0. Try again.")
+                    print("Velocity must be between -10.0 and 10.0. Try again.")
             except ValueError:
-                print("Invalid input. Please enter a valid float number.")
+                print("Invalid input. Please enter numeric values.")
 
         twist = Twist()
         twist.linear.x = lin_vel
-        twist.angular.z = ang_vel 
+        twist.angular.z = ang_vel
 
+        rospy.loginfo(f"Publishing to {turtle}: linear.x={lin_vel}, angular.z={ang_vel}")
         if turtle == "turtle1":
             pub1.publish(twist)
         elif turtle == "turtle2":
             pub2.publish(twist)
 
-        rospy.sleep(1)
+        rospy.sleep(1) 
 
+        # Stop the turtle after movement
         twist.linear.x = 0
         twist.angular.z = 0
+        rospy.loginfo(f"Stopping {turtle}")
         if turtle == "turtle1":
             pub1.publish(twist)
         elif turtle == "turtle2":
@@ -66,3 +69,4 @@ if __name__ == '__main__':
         main()
     except rospy.ROSInterruptException:
         pass
+
