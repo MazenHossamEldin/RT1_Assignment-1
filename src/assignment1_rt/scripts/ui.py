@@ -32,14 +32,16 @@ def main():
 
         while True:
             try:
-                lin_vel = float(input("Enter linear velocity (-10 to 10): "))
-                ang_vel = float(input("Enter angular velocity (-10 to 10): "))
-                if -10 <= lin_vel <= 10 and -10 <= ang_vel <= 10:
+                lin_vel_str = input("Enter linear velocity (-10.0 to 10.0): ")
+                ang_vel_str = input("Enter angular velocity (-10.0 to 10.0): ")
+                lin_vel = float(lin_vel_str)
+                ang_vel = float(ang_vel_str) 
+                if -10.0 <= lin_vel <= 10.0 and -10.0 <= ang_vel <= 10.0:
                     break
                 else:
-                    print("Linear velocity must be between -10 and 10. Angular velocity must be between -10 and 10. Try again.")
+                    print("Linear velocity must be between -10.0 and 10.0. Angular velocity must be between -10.0 and 10.0. Try again.")
             except ValueError:
-                print("Invalid input. Please enter a number.")
+                print("Invalid input. Please enter a valid float number.")
 
         twist = Twist()
         twist.linear.x = lin_vel
