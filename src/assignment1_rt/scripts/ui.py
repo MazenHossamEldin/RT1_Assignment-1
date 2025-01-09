@@ -1,83 +1,76 @@
 #!/usr/bin/env python3
 
 import rospy
-from turtlesim.srv import Spawn
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Bool
-
-# Global variables to track stop signals
-stop_turtle1 = False
-stop_turtle2 = False
-
-def spawn_turtle():
-    rospy.wait_for_service('/spawn')
-    try:
-        spawn = rospy.ServiceProxy('/spawn', Spawn)
-        rospy.loginfo("Spawning turtle2...")
-        spawn(5.0, 7.0, 0.0, 'turtle2')
-        rospy.loginfo("Turtle2 spawned successfully!")
-    except rospy.ServiceException as e:
-        rospy.logerr(f"Service call failed: {e}")
-
-def stop_turtle1_callback(msg):
-    global stop_turtle1
-    stop_turtle1 = msg.data
-
-def stop_turtle2_callback(msg):
-    global stop_turtle2
-    stop_turtle2 = msg.data
+from turtlesim.srv import Spawn
 
 def main():
-    rospy.init_node('ui_node')
-    pub1 = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
-    pub2 = rospy.Publisher('/turtle2/cmd_vel', Twist, queue_size=10)
+    rospy.init_node("ui_node")
 
-    rospy.Subscriber('/turtle1/stop', Bool, stop_turtle1_callback)
-    rospy.Subscriber('/turtle2/stop', Bool, stop_turtle2_callback)
+    # Publishers for turtle commands
+    pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=10)
+    pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=10)
 
-    rospy.sleep(1)
-    spawn_turtle()
+    # Wait for the spawn service to become available
+    rospy.wait_for_service("/spawn")
+    try:
+        spawn_turtle = rospy.ServiceProxy("/spawn", Spawn)
+        spawn_turtle(5.0, 8.0, 0.0, "turtle2")
+        rospy.loginfo("Spawned turtle2 at (5.0, 8.0)")
+    except rospy.ServiceException as e:
+        rospy.logerr(f"Failed to spawn turtle2: {e}")
+        return
 
     while not rospy.is_shutdown():
-        while True:
-            turtle_choice = input("Which turtle to control (1 or 2)? ")
-            if turtle_choice in ['1', '2']:
-                break
-            print("Invalid input. Please enter 1 or 2.")
+        try:
+            # Turtle selection
+            turtle_choice = input("Select a turtle to control:\n1. turtle1\n2. turtle2\nEnter your choice (1 or 2): ").strip()
+            if turtle_choice not in ["1", "2"]:
+                print("Invalid input. Please choose 1 (turtle1) or 2 (turtle2).")
+                continue
 
-        turtle = "turtle1" if turtle_choice == "1" else "turtle2"
-        pub = pub1 if turtle_choice == "1" else pub2
-        stop_flag = stop_turtle1 if turtle_choice == "1" else stop_turtle2
-
-        while True:
+            # Velocity input
             try:
-                lin_vel = float(input("Enter linear velocity (-10.0 to 10.0): "))
-                ang_vel = float(input("Enter angular velocity (-10.0 to 10.0): "))
-                if -10.0 <= lin_vel <= 10.0 and -10.0 <= ang_vel <= 10.0:
-                    break
-                print("Velocity must be between -10.0 and 10.0.")
+                linear_vel = float(input("Enter linear velocity (float): ").strip())
+                angular_vel = float(input("Enter angular velocity (float): ").strip())
             except ValueError:
-                print("Invalid input. Please enter numeric values.")
+                print("Invalid velocity. Please enter numeric values for both linear and angular velocities.")
+                continue
 
-        # Allow movement only if the stop flag is not raised
-        if stop_flag:
-            rospy.loginfo(f"{turtle} is currently stopped. Checking if the command is safe...")
-        else:
+            # Feedback for user input
+            turtle_name = "turtle1" if turtle_choice == "1" else "turtle2"
+            print(f"Controlling {turtle_name} with linear velocity {linear_vel} and angular velocity {angular_vel}.")
+
+            # Create and publish velocity command
             twist = Twist()
-            twist.linear.x = lin_vel
-            twist.angular.z = ang_vel
-            rospy.loginfo(f"Publishing to {turtle}: linear.x={lin_vel}, angular.z={ang_vel}")
-            pub.publish(twist)
+            twist.linear.x = linear_vel
+            twist.angular.z = angular_vel
 
-        rospy.sleep(1)
+            # Publish the movement command
+            if turtle_choice == "1":
+                pub_turtle1.publish(twist)
+            else:
+                pub_turtle2.publish(twist)
 
-        # Stop the turtle after executing the command
-        twist = Twist()
-        twist.linear.x = 0
-        twist.angular.z = 0
-        pub.publish(twist)
+            # Hold the command for 1 second
+            rospy.sleep(1.0)
 
-if __name__ == '__main__':
+            # Stop the turtle after 1 second to prepare for the next user command
+            stop_twist = Twist()
+            stop_twist.linear.x = 0
+            stop_twist.angular.z = 0
+            if turtle_choice == "1":
+                pub_turtle1.publish(stop_twist)
+            else:
+                pub_turtle2.publish(stop_twist)
+
+            print("Command executed. Turtle has stopped. Enter a new command.")
+
+        except KeyboardInterrupt:
+            print("\nExiting UI node. Goodbye!")
+            break
+
+if __name__ == "__main__":
     try:
         main()
     except rospy.ROSInterruptException:
