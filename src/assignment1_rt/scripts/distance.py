@@ -4,95 +4,82 @@ import rospy
 from turtlesim.msg import Pose
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
+import math
 
-class DistanceNode:
-    def __init__(self):
-        rospy.init_node("distance_node")
+def calculate_distance(pose1, pose2):
+    """Calculate Euclidean distance between two poses."""
+    return math.sqrt((pose2.x - pose1.x)**2 + (pose2.y - pose1.y)**2)
 
-        # Parameters
-        self.proximity_threshold = 1.0  # Minimum distance between turtles
-        self.boundary_limits = [1.0, 10.0]  # x and y boundaries
+def boundary_check(pose):
+    """Check if a turtle is near or beyond the boundaries of the environment."""
+    return pose.x >= 10.0 or pose.x <= 1.0 or pose.y >= 10.0 or pose.y <= 1.0
 
-        # Publishers
-        self.distance_pub = rospy.Publisher("/turtle_distance", Float32, queue_size=10)
-        self.turtle1_stop_pub = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=10)
-        self.turtle2_stop_pub = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=10)
+def distance_node():
+    rospy.init_node("distance_node")
 
-        # Subscribers
-        rospy.Subscriber("/turtle1/pose", Pose, self.turtle1_pose_callback)
-        rospy.Subscriber("/turtle2/pose", Pose, self.turtle2_pose_callback)
+    # Publishers to stop turtles if needed
+    pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=10)
+    pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=10)
 
-        # Turtle poses
-        self.turtle1_pose = None
-        self.turtle2_pose = None
+    # Publisher for distance between turtles
+    distance_pub = rospy.Publisher("/distance", Float32, queue_size=10)
 
-        # States to track if turtles are stopped due to threshold violations
-        self.turtle1_stopped = False
-        self.turtle2_stopped = False
+    # Initialize pose variables
+    turtle1_pose = None
+    turtle2_pose = None
 
-    def turtle1_pose_callback(self, msg):
-        self.turtle1_pose = msg
-        self.check_safety("turtle1")
+    def turtle1_pose_callback(msg):
+        nonlocal turtle1_pose
+        turtle1_pose = msg
 
-    def turtle2_pose_callback(self, msg):
-        self.turtle2_pose = msg
-        self.check_safety("turtle2")
+    def turtle2_pose_callback(msg):
+        nonlocal turtle2_pose
+        turtle2_pose = msg
 
-    def calculate_distance(self):
-        if self.turtle1_pose and self.turtle2_pose:
-            dx = self.turtle1_pose.x - self.turtle2_pose.x
-            dy = self.turtle1_pose.y - self.turtle2_pose.y
-            return (dx ** 2 + dy ** 2) ** 0.5
-        return None
+    # Subscribe to pose topics of turtle1 and turtle2
+    rospy.Subscriber("/turtle1/pose", Pose, turtle1_pose_callback)
+    rospy.Subscriber("/turtle2/pose", Pose, turtle2_pose_callback)
 
-    def check_safety(self, turtle_name):
-        distance = self.calculate_distance()
-        if distance:
-            # Publish the distance between turtles
-            self.distance_pub.publish(distance)
+    rate = rospy.Rate(10)  # 10 Hz loop rate
 
-        # Determine which turtle's pose to check
-        pose = self.turtle1_pose if turtle_name == "turtle1" else self.turtle2_pose
-        stop_pub = self.turtle1_stop_pub if turtle_name == "turtle1" else self.turtle2_stop_pub
+    threshold_distance = 1.0  # Proximity threshold
 
-        # Only stop the turtle if it is moving and violates a threshold
-        if pose:
-            # Check proximity violation
-            if distance and distance < self.proximity_threshold:
-                if not getattr(self, f"{turtle_name}_stopped"):
-                    rospy.loginfo(f"{turtle_name} stopped due to proximity violation.")
-                    self.stop_turtle(stop_pub, turtle_name)
-                return
+    while not rospy.is_shutdown():
+        if turtle1_pose and turtle2_pose:
+            # Calculate the distance between the turtles
+            distance = calculate_distance(turtle1_pose, turtle2_pose)
+            
+            # Publish the distance
+            distance_pub.publish(distance)
 
-            # Check boundary violations
-            if pose.x < self.boundary_limits[0] or pose.x > self.boundary_limits[1] or \
-               pose.y < self.boundary_limits[0] or pose.y > self.boundary_limits[1]:
-                if not getattr(self, f"{turtle_name}_stopped"):
-                    rospy.loginfo(f"{turtle_name} stopped due to boundary violation.")
-                    self.stop_turtle(stop_pub, turtle_name)
+            # Enforce proximity threshold
+            if distance < threshold_distance:
+                rospy.logwarn("Turtles are too close! Stopping movement.")
+                stop_turtle(pub_turtle1)
+                stop_turtle(pub_turtle2)
 
-    def stop_turtle(self, stop_pub, turtle_name):
-        # Publish zero velocities to stop the turtle
-        stop_twist = Twist()
-        stop_twist.linear.x = 0
-        stop_twist.angular.z = 0
-        stop_pub.publish(stop_twist)
+            # Enforce boundary thresholds for turtle1
+            if boundary_check(turtle1_pose):
+                rospy.logwarn("Turtle1 is at the boundary! Stopping movement.")
+                stop_turtle(pub_turtle1)
 
-        # Mark the turtle as stopped
-        setattr(self, f"{turtle_name}_stopped", True)
+            # Enforce boundary thresholds for turtle2
+            if boundary_check(turtle2_pose):
+                rospy.logwarn("Turtle2 is at the boundary! Stopping movement.")
+                stop_turtle(pub_turtle2)
 
-    def resume_turtle(self, stop_pub, turtle_name):
-        # Mark the turtle as stopped, and wait for user input to issue new commands
-        setattr(self, f"{turtle_name}_stopped", False)
+        rate.sleep()
 
-    def run(self):
-        rospy.loginfo("Distance Node is running...")
-        rospy.spin()
+def stop_turtle(publisher):
+    """Publish a stop command to the given turtle."""
+    stop_cmd = Twist()
+    stop_cmd.linear.x = 0
+    stop_cmd.angular.z = 0
+    publisher.publish(stop_cmd)
 
 if __name__ == "__main__":
     try:
-        node = DistanceNode()
-        node.run()
+        distance_node()
     except rospy.ROSInterruptException:
-        rospy.loginfo("Distance Node terminated.")
+        pass
 

@@ -11,12 +11,12 @@ def main():
     pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=10)
     pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=10)
 
-    # Wait for the spawn service to become available
+    # Spawn turtle2
     rospy.wait_for_service("/spawn")
     try:
         spawn_turtle = rospy.ServiceProxy("/spawn", Spawn)
-        spawn_turtle(5.0, 8.0, 0.0, "turtle2")
-        rospy.loginfo("Spawned turtle2 at (5.0, 8.0)")
+        spawn_turtle(5.0, 5.0, 0.0, "turtle2")
+        rospy.loginfo("Spawned turtle2 at (5.0, 5.0)")
     except rospy.ServiceException as e:
         rospy.logerr(f"Failed to spawn turtle2: {e}")
         return
@@ -45,8 +45,6 @@ def main():
             twist = Twist()
             twist.linear.x = linear_vel
             twist.angular.z = angular_vel
-
-            # Publish the movement command
             if turtle_choice == "1":
                 pub_turtle1.publish(twist)
             else:
@@ -55,14 +53,13 @@ def main():
             # Hold the command for 1 second
             rospy.sleep(1.0)
 
-            # Stop the turtle after 1 second to prepare for the next user command
-            stop_twist = Twist()
-            stop_twist.linear.x = 0
-            stop_twist.angular.z = 0
+            # Stop the turtle
+            twist.linear.x = 0
+            twist.angular.z = 0
             if turtle_choice == "1":
-                pub_turtle1.publish(stop_twist)
+                pub_turtle1.publish(twist)
             else:
-                pub_turtle2.publish(stop_twist)
+                pub_turtle2.publish(twist)
 
             print("Command executed. Turtle has stopped. Enter a new command.")
 
