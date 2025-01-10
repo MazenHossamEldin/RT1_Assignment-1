@@ -79,9 +79,9 @@ def distance_node():
     rospy.Subscriber("/turtle1/cmd_vel", Twist, turtle1_cmd_vel_callback)
     rospy.Subscriber("/turtle2/cmd_vel", Twist, turtle2_cmd_vel_callback)
 
-    rate = rospy.Rate(50)  # 50 Hz loop rate
+    rate = rospy.Rate(10)  # loop rate
 
-    threshold_distance = 1.5  # Proximity threshold
+    threshold_distance = 2  # Proximity threshold
 
     while not rospy.is_shutdown():
         if turtle1_pose and turtle2_pose:
@@ -120,7 +120,7 @@ def stop_turtle(publisher):
     stop_cmd.linear.x = 0
     stop_cmd.angular.z = 0
     publisher.publish(stop_cmd)
-    rospy.sleep(0.5)
+    rospy.sleep(1)
 
     # Use the sign of the velocity to move backward
     if publisher.resolved_name == "/turtle1/cmd_vel":
@@ -134,10 +134,10 @@ def stop_turtle(publisher):
     publisher.publish(stop_cmd)
     rospy.sleep(1)  # Adjust duration as needed
 
-    rospy.loginfo("Turtle stopped after moving away.")
-    stop_cmd.linear.x = 0
-    stop_cmd.angular.z = 0
-    publisher.publish(stop_cmd)
+    #rospy.loginfo("Turtle stopped after moving away.")
+    #stop_cmd.linear.x = 0
+    #stop_cmd.angular.z = 0
+    #publisher.publish(stop_cmd)
 
 if __name__ == "__main__":
     try:
