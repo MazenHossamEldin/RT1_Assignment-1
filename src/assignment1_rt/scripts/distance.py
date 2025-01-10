@@ -4,11 +4,16 @@ import rospy
 from turtlesim.msg import Pose
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
+from turtlesim.srv import TeleportAbsolute
 import math
 
 # Store the twist linear velocities for each turtle
 turtle1_linear_vel = 0.0
 turtle2_linear_vel = 0.0
+
+# Store initial spawn positions for the turtles
+turtle1_initial_pose = (5.0, 5.0, 0.0)  # Default spawn position for turtle1
+turtle2_initial_pose = (5.0, 8.0, 0.0)  # Custom spawn position for turtle2
 
 def calculate_distance(pose1, pose2):
     """Calculate Euclidean distance between two poses."""
@@ -21,6 +26,14 @@ def boundary_check(pose):
 def get_sign(value):
     """Get the sign of a value (-1 for negative, 1 for positive, 0 for zero)."""
     return 1 if value > 0 else -1 if value < 0 else 0
+
+def teleport_turtle(service_proxy, x, y, theta):
+    """Teleport a turtle to the specified position."""
+    try:
+        service_proxy(x, y, theta)
+        rospy.loginfo(f"Turtle teleported to: x={x}, y={y}, theta={theta}")
+    except rospy.ServiceException as e:
+        rospy.logerr(f"Failed to teleport turtle: {e}")
 
 def turtle1_cmd_vel_callback(msg):
     """Callback function to update turtle1's linear velocity."""
@@ -41,6 +54,10 @@ def distance_node():
 
     # Publisher for distance between turtles
     distance_pub = rospy.Publisher("/distance", Float32, queue_size=10)
+
+    # Teleport services for turtles
+    teleport_turtle1 = rospy.ServiceProxy("/turtle1/teleport_absolute", TeleportAbsolute)
+    teleport_turtle2 = rospy.ServiceProxy("/turtle2/teleport_absolute", TeleportAbsolute)
 
     # Initialize pose variables
     turtle1_pose = None
@@ -82,13 +99,13 @@ def distance_node():
 
             # Enforce boundary thresholds for turtle1
             if boundary_check(turtle1_pose):
-                rospy.logwarn("Turtle1 is at the boundary! Stopping movement.")
-                stop_turtle(pub_turtle1)
+                rospy.logwarn("Turtle1 is at the boundary! Teleporting to initial position.")
+                teleport_turtle(teleport_turtle1, *turtle1_initial_pose)
 
             # Enforce boundary thresholds for turtle2
             if boundary_check(turtle2_pose):
-                rospy.logwarn("Turtle2 is at the boundary! Stopping movement.")
-                stop_turtle(pub_turtle2)
+                rospy.logwarn("Turtle2 is at the boundary! Teleporting to initial position.")
+                teleport_turtle(teleport_turtle2, *turtle2_initial_pose)
 
             # Log linear velocities for debugging
             rospy.loginfo(f"Turtle1 linear velocity: {turtle1_linear_vel}")
@@ -105,19 +122,7 @@ def stop_turtle(publisher):
     publisher.publish(stop_cmd)
     rospy.sleep(0.5)
 
-    # Use the sign of the velocity to move backward
-    if publisher.resolved_name == "/turtle1/cmd_vel":
-        linear_velocity_sign = get_sign(turtle1_linear_vel)
-    elif publisher.resolved_name == "/turtle2/cmd_vel":
-        linear_velocity_sign = get_sign(turtle2_linear_vel)
-    else:
-        linear_velocity_sign = 0  # Default to 0 if no valid publisher is matched
-
-    stop_cmd.linear.x = -2 * linear_velocity_sign
-    publisher.publish(stop_cmd)
-    rospy.sleep(1)  # Adjust duration as needed
-
-    rospy.loginfo("Turtle stopped after moving away.")
+    rospy.loginfo("Turtle stopped.")
     stop_cmd.linear.x = 0
     stop_cmd.angular.z = 0
     publisher.publish(stop_cmd)

@@ -3,6 +3,11 @@
 import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.srv import Spawn
+from std_msgs.msg import String  # To receive teleport notifications
+
+def teleport_notification_callback(msg):
+    """Callback to handle teleportation notifications."""
+    rospy.loginfo(f"Notification from distance node: {msg.data}")
 
 def main():
     rospy.init_node("ui_node")
@@ -11,6 +16,8 @@ def main():
     pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=1)
     pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=1)
     
+    # Subscribe to teleport notifications from the distance node
+    rospy.Subscriber("/teleport_notification", String, teleport_notification_callback)
 
     # Spawn turtle2
     rospy.wait_for_service("/spawn")
