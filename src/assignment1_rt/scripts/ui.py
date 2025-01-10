@@ -8,15 +8,16 @@ def main():
     rospy.init_node("ui_node")
 
     # Publishers for turtle commands
-    pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=10)
-    pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=10)
+    pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=1)
+    pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=1)
+    
 
     # Spawn turtle2
     rospy.wait_for_service("/spawn")
     try:
         spawn_turtle = rospy.ServiceProxy("/spawn", Spawn)
-        spawn_turtle(5.0, 5.0, 0.0, "turtle2")
-        rospy.loginfo("Spawned turtle2 at (5.0, 5.0)")
+        spawn_turtle(5.0, 8.0, 0.0, "turtle2")
+        rospy.loginfo("Spawned turtle2 at (5.0, 8.0)")
     except rospy.ServiceException as e:
         rospy.logerr(f"Failed to spawn turtle2: {e}")
         return

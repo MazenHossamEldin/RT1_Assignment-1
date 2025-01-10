@@ -6,6 +6,10 @@ from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
 import math
 
+# Store the twist linear velocities for each turtle
+turtle1_linear_vel = 0.0
+turtle2_linear_vel = 0.0
+
 def calculate_distance(pose1, pose2):
     """Calculate Euclidean distance between two poses."""
     return math.sqrt((pose2.x - pose1.x)**2 + (pose2.y - pose1.y)**2)
@@ -14,12 +18,26 @@ def boundary_check(pose):
     """Check if a turtle is near or beyond the boundaries of the environment."""
     return pose.x >= 10.0 or pose.x <= 1.0 or pose.y >= 10.0 or pose.y <= 1.0
 
+def get_sign(value):
+    """Get the sign of a value (-1 for negative, 1 for positive, 0 for zero)."""
+    return 1 if value > 0 else -1 if value < 0 else 0
+
+def turtle1_cmd_vel_callback(msg):
+    """Callback function to update turtle1's linear velocity."""
+    global turtle1_linear_vel
+    turtle1_linear_vel = msg.linear.x
+
+def turtle2_cmd_vel_callback(msg):
+    """Callback function to update turtle2's linear velocity."""
+    global turtle2_linear_vel
+    turtle2_linear_vel = msg.linear.x
+
 def distance_node():
     rospy.init_node("distance_node")
 
     # Publishers to stop turtles if needed
-    pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=10)
-    pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=10)
+    pub_turtle1 = rospy.Publisher("/turtle1/cmd_vel", Twist, queue_size=1)
+    pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=1)
 
     # Publisher for distance between turtles
     distance_pub = rospy.Publisher("/distance", Float32, queue_size=10)
@@ -40,9 +58,13 @@ def distance_node():
     rospy.Subscriber("/turtle1/pose", Pose, turtle1_pose_callback)
     rospy.Subscriber("/turtle2/pose", Pose, turtle2_pose_callback)
 
-    rate = rospy.Rate(10)  # 10 Hz loop rate
+    # Subscribe to cmd_vel topics for turtle1 and turtle2 to get their linear velocities
+    rospy.Subscriber("/turtle1/cmd_vel", Twist, turtle1_cmd_vel_callback)
+    rospy.Subscriber("/turtle2/cmd_vel", Twist, turtle2_cmd_vel_callback)
 
-    threshold_distance = 1.0  # Proximity threshold
+    rate = rospy.Rate(50)  # 50 Hz loop rate
+
+    threshold_distance = 1.5  # Proximity threshold
 
     while not rospy.is_shutdown():
         if turtle1_pose and turtle2_pose:
@@ -68,11 +90,34 @@ def distance_node():
                 rospy.logwarn("Turtle2 is at the boundary! Stopping movement.")
                 stop_turtle(pub_turtle2)
 
+            # Log linear velocities for debugging
+            rospy.loginfo(f"Turtle1 linear velocity: {turtle1_linear_vel}")
+            rospy.loginfo(f"Turtle2 linear velocity: {turtle2_linear_vel}")
+
         rate.sleep()
 
 def stop_turtle(publisher):
-    """Publish a stop command to the given turtle."""
+    """Stop the turtle and move it slightly backward based on the direction of its velocity."""
+    rospy.loginfo("Stopping a turtle at the threshold.")
     stop_cmd = Twist()
+    stop_cmd.linear.x = 0
+    stop_cmd.angular.z = 0
+    publisher.publish(stop_cmd)
+    rospy.sleep(0.5)
+
+    # Use the sign of the velocity to move backward
+    if publisher.resolved_name == "/turtle1/cmd_vel":
+        linear_velocity_sign = get_sign(turtle1_linear_vel)
+    elif publisher.resolved_name == "/turtle2/cmd_vel":
+        linear_velocity_sign = get_sign(turtle2_linear_vel)
+    else:
+        linear_velocity_sign = 0  # Default to 0 if no valid publisher is matched
+
+    stop_cmd.linear.x = -2 * linear_velocity_sign
+    publisher.publish(stop_cmd)
+    rospy.sleep(1)  # Adjust duration as needed
+
+    rospy.loginfo("Turtle stopped after moving away.")
     stop_cmd.linear.x = 0
     stop_cmd.angular.z = 0
     publisher.publish(stop_cmd)
