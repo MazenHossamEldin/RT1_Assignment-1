@@ -122,7 +122,19 @@ def stop_turtle(publisher):
     publisher.publish(stop_cmd)
     rospy.sleep(0.5)
 
-    rospy.loginfo("Turtle stopped.")
+    # Use the sign of the velocity to move backward
+    if publisher.resolved_name == "/turtle1/cmd_vel":
+        linear_velocity_sign = get_sign(turtle1_linear_vel)
+    elif publisher.resolved_name == "/turtle2/cmd_vel":
+        linear_velocity_sign = get_sign(turtle2_linear_vel)
+    else:
+        linear_velocity_sign = 0  # Default to 0 if no valid publisher is matched
+
+    stop_cmd.linear.x = -2 * linear_velocity_sign
+    publisher.publish(stop_cmd)
+    rospy.sleep(1)  # Adjust duration as needed
+
+    rospy.loginfo("Turtle stopped after moving away.")
     stop_cmd.linear.x = 0
     stop_cmd.angular.z = 0
     publisher.publish(stop_cmd)
