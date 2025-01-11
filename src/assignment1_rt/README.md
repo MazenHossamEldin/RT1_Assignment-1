@@ -1,66 +1,87 @@
-# Turtlesim Control Package
+# Turtlesim Distance Monitoring Package
 
-This package provides a simulation framework to control and monitor two turtles within the ROS `turtlesim` environment. It includes functionality to calculate the distance between two turtles, enforce proximity and boundary thresholds, and allow user interaction via a UI for controlling the turtles' movement.
+This ROS package is designed to control two turtles in the Turtlesim environment, monitor the distance between them, and enforce boundary checks and proximity thresholds. The package consists of two main nodes: `distance_node` and `ui_node`.
 
-## Overview of the Project
+## Project Description
 
-The project simulates two turtles in the `turtlesim` environment. The following functionalities are provided:
-
-1. **Distance Calculation and Threshold Enforcement**:
-    - A node calculates the Euclidean distance between two turtles and enforces a minimum proximity threshold.
-    - The turtles are stopped if they come too close to each other or approach the boundary of the environment.
-
-2. **User Interaction via a UI**:
-    - A user interface node allows the user to control the turtles' movements by specifying linear and angular velocities.
+This project aims to demonstrate basic ROS concepts such as creating and using nodes, publishing and subscribing to topics, and using services. The `distance_node` monitors the distance between two turtles and ensures they do not get too close or move out of bounds. The `ui_node` provides a simple user interface to control the turtles' velocities.
 
 ## Nodes
 
-### 1. `distance.py`
-This node monitors the turtles' positions, calculates the distance between them, and enforces safety thresholds. It performs the following tasks:
-- Calculates the Euclidean distance between `turtle1` and `turtle2`.
-- Stops a turtle if it:
-  - Comes too close to the other turtle (distance < 1.5 units).
-  - Reaches the boundary of the simulation environment.
-- Publishes the calculated distance on the `/distance` topic.
+### distance_node
 
-#### Key Topics:
-- **Subscribed Topics**:
-  - `/turtle1/pose`: Retrieves the position of `turtle1`.
-  - `/turtle2/pose`: Retrieves the position of `turtle2`.
-  - `/turtle1/cmd_vel`: Monitors `turtle1`'s velocity.
-  - `/turtle2/cmd_vel`: Monitors `turtle2`'s velocity.
-- **Published Topics**:
-  - `/turtle1/cmd_vel`: Sends stop or backward movement commands to `turtle1`.
-  - `/turtle2/cmd_vel`: Sends stop or backward movement commands to `turtle2`.
-  - `/distance`: Publishes the distance between the two turtles.
+The `distance_node` is responsible for:
+- Calculating the distance between two turtles.
+- Publishing the distance between the turtles on the `/distance` topic.
+- Stopping the turtles if they get too close to each other.
+- Teleporting the turtles back to their initial positions if they move out of bounds.
+- Logging the linear velocities of the turtles for debugging purposes.
 
-#### Thresholds:
-- **Proximity Threshold**: Stops turtles if they are closer than 1.5 units.
-- **Boundary Threshold**: Stops turtles if they reach or exceed the simulation boundaries (x or y in `[1.0, 10.0]`).
+#### Subscribed Topics
+- `/turtle1/pose` (Pose): Receives the pose of turtle1.
+- `/turtle2/pose` (Pose): Receives the pose of turtle2.
+- `/turtle1/cmd_vel` (Twist): Receives the linear velocity of turtle1.
+- `/turtle2/cmd_vel` (Twist): Receives the linear velocity of turtle2.
 
-### 2. `UI.py`
-This node provides a user-friendly interface to control the turtles by specifying their linear and angular velocities.
+#### Published Topics
+- `/distance` (Float32): Publishes the distance between the two turtles.
+- `/turtle1/cmd_vel` (Twist): Publishes commands to control turtle1.
+- `/turtle2/cmd_vel` (Twist): Publishes commands to control turtle2.
 
-#### Key Features:
-- Spawns `turtle2` at the position (5.0, 8.0).
-- Allows the user to:
-  - Select which turtle to control (`turtle1` or `turtle2`).
-  - Input linear and angular velocities for the selected turtle.
-- Sends velocity commands to the turtles and automatically stops them after 1 second.
+### ui_node
 
-#### Key Topics:
-- **Published Topics**:
-  - `/turtle1/cmd_vel`: Sends velocity commands to `turtle1`.
-  - `/turtle2/cmd_vel`: Sends velocity commands to `turtle2`.
+The `ui_node` provides a user interface to control the velocities of the turtles. It allows the user to select a turtle and input linear and angular velocities, which are then published to the respective turtles' cmd_vel topics.
 
-## Installation and Running the Package
+#### Subscribed Topics
+- `/teleport_notification` (String): Receives teleport notifications from the distance node.
 
-### Prerequisites
-- ROS installed on your system (tested with ROS Noetic).
-- `turtlesim` package installed.
+#### Published Topics
+- `/turtle1/cmd_vel` (Twist): Publishes commands to control turtle1.
+- `/turtle2/cmd_vel` (Twist): Publishes commands to control turtle2.
 
-### Installation Steps
-1. Clone the package into your ROS workspace:
-   ```bash
-   cd ~/catkin_ws/src
-   git clone <repository-link>
+## Installation
+
+1. **Install ROS**: Follow the instructions on the [ROS installation page](http://wiki.ros.org/ROS/Installation) to install ROS (recommended version: Noetic).
+
+2. **Create a Catkin Workspace**:
+    ```bash
+    mkdir -p ~/catkin_ws/src
+    cd ~/catkin_ws/
+    catkin_make
+    source devel/setup.bash
+    ```
+
+3. **Clone the Package**:
+    ```bash
+    cd ~/catkin_ws/src
+    git clone https://github.com/MazenHossamEldin/RT1_Assignment-1.git
+    cd ..
+    catkin_make
+    source devel/setup.bash
+    ```
+
+## Running the Nodes
+
+1. **Start the Turtlesim Node**:
+    ```bash
+    roscore
+    ```
+
+    Open a new terminal and run:
+    ```bash
+    rosrun turtlesim turtlesim_node
+    ```
+
+2. **Run the Distance Node**:
+    Open a new terminal and run:
+    ```bash
+    rosrun assignment1_rt distance.py
+    ```
+
+3. **Run the UI Node**:
+    Open a new terminal and run:
+    ```bash
+    rosrun assignment1_rt ui.py
+    ```
+
+Now you can use the UI node to control the turtles and observe the distance monitoring functionality in action. The turtles will be teleported back to their initial positions if they move out of bounds, and their movements will be stopped if they get too close to each other.
