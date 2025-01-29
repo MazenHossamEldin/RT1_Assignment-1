@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-import rospy
+import rospy # for ROS
 from turtlesim.msg import Pose
-from std_msgs.msg import Float32
-from geometry_msgs.msg import Twist
-from turtlesim.srv import TeleportAbsolute
-import math
+from std_msgs.msg import Float32 # for distance calculation
+from geometry_msgs.msg import Twist # for turtle movement
+from turtlesim.srv import TeleportAbsolute # for teleportation
+import math # for distance calculation
 
 # Store the twist linear velocities for each turtle
-turtle1_linear_vel = 0.0
+turtle1_linear_vel = 0.0 # for turtle1
 turtle2_linear_vel = 0.0
 
 # Store initial spawn positions for the turtles
@@ -53,11 +53,11 @@ def distance_node():
     pub_turtle2 = rospy.Publisher("/turtle2/cmd_vel", Twist, queue_size=1)
 
     # Publisher for distance between turtles
-    distance_pub = rospy.Publisher("/distance", Float32, queue_size=10)
+    distance_pub = rospy.Publisher("/distance", Float32, queue_size=10) # publisher for distance between turtles
 
     # Teleport services for turtles
-    teleport_turtle1 = rospy.ServiceProxy("/turtle1/teleport_absolute", TeleportAbsolute)
-    teleport_turtle2 = rospy.ServiceProxy("/turtle2/teleport_absolute", TeleportAbsolute)
+    teleport_turtle1 = rospy.ServiceProxy("/turtle1/teleport_absolute", TeleportAbsolute) # client for turtle1
+    teleport_turtle2 = rospy.ServiceProxy("/turtle2/teleport_absolute", TeleportAbsolute) # client for turtle2
 
     # Initialize pose variables
     turtle1_pose = None
@@ -94,7 +94,7 @@ def distance_node():
             # Enforce proximity threshold
             if distance < threshold_distance:
                 rospy.logwarn("Turtles are too close! Stopping movement.")
-                stop_turtle(pub_turtle1)
+                stop_turtle(pub_turtle1) 
                 stop_turtle(pub_turtle2)
 
             # Enforce boundary thresholds for turtle1
@@ -123,8 +123,8 @@ def stop_turtle(publisher):
     rospy.sleep(1)
 
     # Use the sign of the velocity to move backward
-    if publisher.resolved_name == "/turtle1/cmd_vel":
-        linear_velocity_sign = get_sign(turtle1_linear_vel)
+    if publisher.resolved_name == "/turtle1/cmd_vel": 
+        linear_velocity_sign = get_sign(turtle1_linear_vel) 
     elif publisher.resolved_name == "/turtle2/cmd_vel":
         linear_velocity_sign = get_sign(turtle2_linear_vel)
     else:
@@ -134,10 +134,10 @@ def stop_turtle(publisher):
     publisher.publish(stop_cmd)
     rospy.sleep(1)  # Adjust duration as needed
 
-    #rospy.loginfo("Turtle stopped after moving away.")
-    #stop_cmd.linear.x = 0
-    #stop_cmd.angular.z = 0
-    #publisher.publish(stop_cmd)
+    rospy.loginfo("Turtle stopped after moving away.")
+    stop_cmd.linear.x = 0
+    stop_cmd.angular.z = 0
+    publisher.publish(stop_cmd)
 
 if __name__ == "__main__":
     try:

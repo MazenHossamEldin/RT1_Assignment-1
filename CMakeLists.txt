@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES assignment1_rt
-#  CATKIN_DEPENDS geometry_msgs rospy std_msgs turtkesim
+#  CATKIN_DEPENDS geometry_msgs rospy std_msgs turtlesim
 #  DEPENDS system_lib
 )
 
