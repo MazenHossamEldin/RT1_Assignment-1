@@ -113,32 +113,6 @@ def distance_node():
 
         rate.sleep()
 
-#def stop_turtle(publisher):
-    """Stop the turtle and move it slightly backward based on the direction of its velocity."""
-#    rospy.loginfo("Stopping a turtle at the threshold.")
-#    stop_cmd = Twist()
-#    stop_cmd.linear.x = 0
-#    stop_cmd.angular.z = 0
-#    publisher.publish(stop_cmd)
-#    rospy.sleep(1)
-
-    # Use the sign of the velocity to move backward
-#    if publisher.resolved_name == "/turtle1/cmd_vel": 
-#        linear_velocity_sign = get_sign(turtle1_linear_vel) 
-#    elif publisher.resolved_name == "/turtle2/cmd_vel":
-#        linear_velocity_sign = get_sign(turtle2_linear_vel)
-#    else:
-#        linear_velocity_sign = 0  # Default to 0 if no valid publisher is matched
-
-#    stop_cmd.linear.x = -2 * linear_velocity_sign
-#    publisher.publish(stop_cmd)
-#    rospy.sleep(1)  # Adjust duration as needed
-
-#    rospy.loginfo("Turtle stopped after moving away.")
-#    stop_cmd.linear.x = 0
-#   stop_cmd.angular.z = 0
-#    publisher.publish(stop_cmd)
-
 if __name__ == "__main__":
     try:
         distance_node()
